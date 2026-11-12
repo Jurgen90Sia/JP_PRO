@@ -8,3 +8,9 @@
 | MS-004 | CNC machine targets | Documented machine configs, coords, tools, postprocessor specs | Machine-specific CNC output cannot be claimed verified | OPEN |
 | MS-005 | Dimension semantics | AJ-observed finished vs nominal vs cutting rules per process | Must be defined explicitly; risk of mismatch until reference available | OPEN |
 | MS-006 | Existing codebase | Prior JP Cabinet PRO implementation (if any outside workspace) | None supplied; starting fresh scaffold | N/A |
+
+## Additional notes (Phase 1/2 scaffold)
+- **Ruby runtime for local test execution:** not present in container; authored Minitest suites unexecuted here (see `docs/test-report.md`).
+- **Vertical slice UI→SketchUp bridge:** `ui/js/bridge.js` dispatches to `window.sketchup.*` when hosted in HtmlDialog; native Ruby callback handlers and dialog wiring not yet implemented.
+- **Technical drawing:** currently a deterministic view-model scaffold (`drawing/technical_view.rb`), not vector-projected geometry/PDF/DXF.
+- **Construction rules:** `cabinet/construction.rb` uses placeholder formulas not yet differentiated by all specified construction rules.
