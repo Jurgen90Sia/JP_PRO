@@ -1,0 +1,8 @@
+{
+  "units": "mm",
+  "languages": ["sq", "en"],
+  "default_language": "en",
+  "panel_thickness_options_mm": [16, 18, 19, 22],
+  "edge_banding_options_mm": [0.4, 1.0, 2.0],
+  "schema_version": 1
+}
