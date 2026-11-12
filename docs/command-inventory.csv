@@ -1,0 +1,2 @@
+unique_command_id,visible_command_name,source_reference,module,parent_menu,user_input_fields,expected_action,sketchup_geometry_effect,dependencies,output_data,confidence,implementation_status,test_coverage
+BLOCKED-001,N/A,N/A (reference media missing),N/A,N/A,N/A,Cannot audit without supplied screenshots/video,N/A,N/A,N/A,BLOCKED,NOT_STARTED,NONE
