@@ -56,8 +56,12 @@ module JPCabinetPro
           view_svg: (result.respond_to?(:view_svg) ? result.view_svg : nil),
           materials: result.respond_to?(:materials) ? result.materials : nil,
           edge_banding_count: (result.respond_to?(:edge_banding) && result.edge_banding) ? result.edge_banding.length : 0,
+          fronts_count: (result.respond_to?(:fronts) && result.fronts) ? result.fronts.length : 0,
+          drawers_count: (result.respond_to?(:drawers) && result.drawers) ? result.drawers.length : 0,
+          hardware_count: (result.respond_to?(:hardware) && result.hardware) ? result.hardware.length : 0,
           nesting: nesting_summary(nesting),
-          invalidations: result.invalidations
+          invalidations: result.invalidations,
+          revision_state: result.respond_to?(:revision_state) ? result.revision_state : nil
         }
       end
 

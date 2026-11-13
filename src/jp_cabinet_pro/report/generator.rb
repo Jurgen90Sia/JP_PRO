@@ -42,13 +42,16 @@ module JPCabinetPro
             <div class="meta">#{meta_html(r)}</div>
             #{section('Project / Cabinet', kv_table(r[:project] || {}))}
             #{section('Parameters', kv_table(r[:params] || {}))}
+            #{section('Fronts / Doors', rows_table(r[:fronts] || []))}
+            #{section('Drawers', drawers_section(r[:drawers] || []))}
+            #{section('Hardware', rows_table(r[:hardware] || []))}
             #{section('Cut List', rows_table(r[:cutlist] || []))}
             #{section('Materials', rows_table(material_rows(r[:materials] || {})))}
             #{section('Edge Banding', rows_table(r[:edge_banding] || []))}
             #{section('Nesting', nesting_section(r[:nesting]))}
             #{section('Technical View', kv_table(view_summary(r[:view] || {})))}
             #{view_svg_section(r[:view_svg])}
-            <div class="meta">Page 1 of 1 (HTML scaffold). PDF/DXF rendering not generated.</div>
+            <div class="meta">Page 1 of 1 (HTML scaffold). PDF/DXF rendering, true projections, barcodes and multi-page layouts not generated.</div>
           </body>
           </html>
         HTML
@@ -57,6 +60,7 @@ module JPCabinetPro
       private
 
       def build_report(snap, options)
+        meta = snap[:metadata] || {}
         {
           generated_at: Time.now.utc.iso8601,
           project: {
@@ -74,9 +78,11 @@ module JPCabinetPro
           nesting: snap[:nesting],
           view: snap[:view],
           view_svg: snap[:view_svg],
-          hardware: snap[:hardware] || [],
+          fronts: snap[:fronts] || meta[:fronts] || [],
+          drawers: snap[:drawers] || meta[:drawers] || [],
+          hardware: snap[:hardware] || meta[:hardware] || [],
           options: options || {},
-          notes: ['HTML scaffold report generated from canonical snapshot. PDF/A4-A0 layouts and barcodes not rendered.']
+          notes: ['HTML scaffold report generated from canonical snapshot. PDF/A4-A0 layouts, barcodes and true projections not rendered.']
         }
       end
 
@@ -104,6 +110,26 @@ module JPCabinetPro
           "<tr>#{cols.map { |c| "<td>#{esc(val((r || {})[c]))}</td>" }.join}</tr>"
         end.join
         "<table><thead><tr>#{head}</tr></thead><tbody>#{body}</tbody></table>"
+      end
+
+      def drawers_section(drawers)
+        arr = Array(drawers)
+        return '<p>—</p>' if arr.empty?
+        summary = arr.map do |d|
+          box = d[:box] || d['box'] || {}
+          front = d[:front] || d['front'] || {}
+          {
+            index: d[:index] || d['index'],
+            front_role: front[:role] || front['role'],
+            front_w: front[:width_mm] || front['width_mm'],
+            front_h: front[:height_mm] || front['height_mm'],
+            box_w: box[:width_mm] || box['width_mm'],
+            box_h: box[:height_mm] || box['height_mm'],
+            box_d: box[:depth_mm] || box['depth_mm'],
+            parts_count: (d[:parts] || d['parts'] || []).length
+          }
+        end
+        rows_table(summary)
       end
 
       def material_rows(materials)
@@ -139,7 +165,6 @@ module JPCabinetPro
 
       def view_svg_section(svg)
         return '' if svg.nil? || svg.to_s.strip.empty?
-        # embed as-is (scaffold); callers responsible for safe/trusted content
         %(<div class="section"><h2>Technical Drawing (SVG scaffold)</h2><div class="svg-wrap">#{svg}</div></div>)
       end
 

@@ -12,30 +12,31 @@
     .scaf { background: #4a3f1f; color: #f2ddb0; }
     .no { background: #4a2a2a; color: #f0caca; }
     .note { font-size: 12px; color: #a0a4ad; margin-top: 12px; }
+    a { color: #7fb0ff; }
   </style>
 </head>
 <body>
   <div class="panel">
     <header>
-      <h1>JP Cabinet PRO <small style="color:#a0a4ad;font-weight:normal">(Scaffold)</small></h1>
+      <h1>JP Cabinet PRO <small style="color:#a0a4ad;font-weight:normal">(Scaffold/Prototype)</small></h1>
     </header>
     <nav class="modules" aria-label="Modules">
       <ul>
         <li><strong>PROJECT</strong> <span class="tag no">not implemented</span></li>
-        <li><strong>LIBRARY</strong> <span class="tag scaf">prototype logic (no UI/runtime insert)</span></li>
+        <li><strong>LIBRARY</strong> <span class="tag scaf">prototype logic</span> — <a href="dialogs/library.html">info</a></li>
         <li><strong>CABINETS</strong> <span class="tag scaf">prototype</span> — <a href="dialogs/dimensions.html">Edit Dimensions (dialog scaffold)</a></li>
-        <li><strong>3D DESIGN</strong> <span class="tag no">not implemented</span></li>
+        <li><strong>3D DESIGN</strong> <span class="tag scaf">command pipeline prototype (no native SketchUp geometry)</span></li>
         <li><strong>MATERIALS</strong> <span class="tag scaf">prototype (net/gross calc)</span></li>
-        <li><strong>HARDWARE</strong> <span class="tag scaf">scaffold</span></li>
+        <li><strong>HARDWARE</strong> <span class="tag scaf">prototype (structured/BOM/aggregate, adapter-based)</span></li>
         <li><strong>BOM</strong> <span class="tag scaf">prototype pipeline</span></li>
-        <li><strong>NESTING</strong> <span class="tag scaf">prototype optimizer (no UI/manual ops)</span></li>
+        <li><strong>NESTING</strong> <span class="tag scaf">prototype optimizer</span> — <a href="dialogs/nesting.html">info</a></li>
         <li><strong>QUOTATIONS</strong> <span class="tag no">not implemented</span></li>
-        <li><strong>SKETCHUP COMPONENTS</strong> <span class="tag no">not implemented</span></li>
-        <li><strong>REPORTS / CNC</strong> <span class="tag scaf">prototype HTML/SVG/CSV/DXF(nesting) — unverified</span></li>
+        <li><strong>SKETCHUP COMPONENTS</strong> <span class="tag no">not implemented (runtime required)</span></li>
+        <li><strong>REPORTS / CNC</strong> <span class="tag scaf">prototype HTML/SVG/CSV/DXF(nesting) — unverified</span> — <a href="dialogs/report.html">info</a></li>
         <li><strong>INDUSTRIAL LAYOUT</strong> <span class="tag no">not implemented</span></li>
       </ul>
     </nav>
-    <p class="note">Registered prototype commands: <code>cabinet.edit_dimensions</code>, <code>nesting.plan</code>, <code>report.generate</code>, <code>cnc.export_csv</code>, <code>cnc.export_nesting_dxf</code>, <code>library.manage</code>. Phase 0 reference audit BLOCKED (AJ Cabinet screenshots/video not in workspace). No parity claimed. SketchUp runtime integration unverified.</p>
+    <p class="note">Registered prototype commands: <code>cabinet.edit_dimensions</code>, <code>nesting.plan</code>, <code>report.generate</code>, <code>cnc.export_csv</code>, <code>cnc.export_nesting_dxf</code>, <code>library.manage</code>. <strong>Phase 0 reference audit BLOCKED</strong> (AJ Cabinet screenshots/video not in workspace). <strong>No parity/production claims.</strong> SketchUp runtime integration unverified.</p>
   </div>
 </body>
 </html>

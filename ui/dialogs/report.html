@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>JP Cabinet PRO — Reports</title>
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="panel">
+    <header><h1>Reports / CNC (Prototype)</h1></header>
+    <p style="font-size:12px;color:#a0a4ad">HTML report from canonical snapshot (params, BOM, cut list, materials net/gross, edge banding, nesting, schematic SVG). Generic CSV and generic nesting DXF (rect outlines) available via commands — <strong>not verified CNC/CAD programs</strong>. PDF rendering and machine-specific postprocessors not implemented/unverified.</p>
+    <ul style="font-size:13px;color:#e6e6e6">
+      <li><code>report.generate</code> → structured report + HTML</li>
+      <li><code>cnc.export_csv</code> → generic CSV</li>
+      <li><code>cnc.export_nesting_dxf</code> → generic nesting DXF (validated placements)</li>
+    </ul>
+    <div class="preview">This dialog is a scaffold; native file-save/export wiring requires SketchUp/runtime integration.</div>
+  </div>
+</body>
+</html>

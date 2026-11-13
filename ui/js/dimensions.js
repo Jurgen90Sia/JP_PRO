@@ -100,7 +100,9 @@
     const p = detail.preview || {};
     const params = p.params || {};
     const parts = (p.parts || []).length;
-    previewEl.textContent = `Preview OK: ${parts} parts, internal W/H/D ${params.internal ? [params.internal.internal_width_mm, params.internal.internal_height_mm, params.internal.internal_depth_mm].map(n=>Number(n).toFixed(1)).join('/') : 'n/a'} mm`;
+    const fronts = (p.fronts || []).length;
+    const drawers = (p.drawers || []).length;
+    previewEl.textContent = `Preview OK: ${parts} carcass parts, fronts ${fronts}, drawers ${drawers}, internal W/H/D ${params.internal ? [params.internal.internal_width_mm, params.internal.internal_height_mm, params.internal.internal_depth_mm].map(n=>Number(n).toFixed(1)).join('/') : 'n/a'} mm`;
     showErrors([]);
   });
 
@@ -118,7 +120,7 @@
       const util = (nest.utilization != null) ? Number(nest.utilization).toFixed(4) : 'n/a';
       nestText = `nesting: ${nest.ok ? 'ok' : 'fail'} (${nest.strategy || 'n/a'}), util=${util}, placed=${nest.placements_count || 0}, unplaced=${nest.unplaced_count || 0}`;
     }
-    previewEl.textContent = `Applied (rev ${detail.revision || '?'}): BOM ${detail.bom_count || 0}, CutList ${detail.cutlist_count || 0}, view ${detail.view ? detail.view.type : 'n/a'}, EB ${detail.edge_banding_count || 0}, ${nestText}. Invalidations: ${(detail.invalidations||[]).join(', ') || 'none'}`;
+    previewEl.textContent = `Applied (rev ${detail.revision || '?'}): BOM ${detail.bom_count || 0}, CutList ${detail.cutlist_count || 0}, fronts ${detail.fronts_count || 0}, drawers ${detail.drawers_count || 0}, hw ${detail.hardware_count || 0}, view ${detail.view ? detail.view.type : 'n/a'}, EB ${detail.edge_banding_count || 0}, ${nestText}. Invalidations: ${(detail.invalidations||[]).join(', ') || 'none'}`;
   });
 
   window.JPBridge.on('dimensions_cancelled', () => {
