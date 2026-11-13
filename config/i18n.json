@@ -1,0 +1,30 @@
+{
+  "en": {
+    "app_name": "JP Cabinet PRO",
+    "edit_dimensions": "Edit Dimensions",
+    "preview": "Preview",
+    "apply": "Apply",
+    "cancel": "Cancel",
+    "width_mm": "Width (mm)",
+    "height_mm": "Height (mm)",
+    "depth_mm": "Depth (mm)",
+    "panel_thickness_mm": "Panel thickness (mm)",
+    "shelf_count": "Shelf count",
+    "back_mount_type": "Back mounting type",
+    "calculated_internal_dimensions": "Calculated internal dimensions"
+  },
+  "sq": {
+    "app_name": "JP Cabinet PRO",
+    "edit_dimensions": "Ndrysho dimensionet",
+    "preview": "Parapamje",
+    "apply": "Apliko",
+    "cancel": "Anulo",
+    "width_mm": "Gjerësia (mm)",
+    "height_mm": "Lartësia (mm)",
+    "depth_mm": "Thellësia (mm)",
+    "panel_thickness_mm": "Trashësia e panelit (mm)",
+    "shelf_count": "Numri i rafteve",
+    "back_mount_type": "Lloji i montimit të pjesës së pasme",
+    "calculated_internal_dimensions": "Dimensionet e brendshme të llogaritura"
+  }
+}

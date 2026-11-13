@@ -1,14 +1,14 @@
 # Reference Audit — Phase 0
 
 **Status:** BLOCKED (reference media not present in repository)  
-**Date:** 2026-11-12  
+**Date:** 2026-11-12 (last checked)  
 **Scope:** Supplied screenshots and video for AJ Cabinet / JP Cabinet PRO parity audit.
 
 ## 1. Evidence collection
 
 Searched repository `/workspace/app` for image/video assets (`png`, `jpg`, `jpeg`, `mp4`, `mov`, `webm`, `avi`): **none found**.
 
-The workspace currently contains only Git metadata (`.git/`). No screenshots, no video, and no existing JP Cabinet PRO source were supplied in-repo.
+The workspace was initially Git-only metadata and now contains JP Cabinet PRO scaffold/docs/tests created without AJ reference evidence. No screenshots, no video, and no pre-existing implementation were supplied in-repo.
 
 ## 2. Timestamped observation log (video)
 
@@ -26,7 +26,8 @@ The workspace currently contains only Git metadata (`.git/`). No screenshots, no
 
 - No command behavior has been invented.
 - No parity claims can be made without a complete feature inventory and verification evidence.
-- All documented capabilities remain **UNVERIFIED** pending receipt and inspection of the supplied reference materials.
+- All AJ-documented capabilities remain **UNVERIFIED** pending receipt and inspection of the supplied reference materials.
+- `docs/command-inventory.csv` includes a prototype vertical-slice command derived from the master prompt (marked INFERRED/AJ-unverified), not from observed AJ media.
 
 ## 5. Required inputs to unblock
 
@@ -37,6 +38,6 @@ The workspace currently contains only Git metadata (`.git/`). No screenshots, no
 ## 6. Next actions after media is provided
 
 1. Create timestamped video observation log (per distinct dialog/menu/command/toolbar/workflow).
-2. Populate `docs/command-inventory.csv` with unique IDs, visible names, inputs, expected actions, geometry effects, dependencies, outputs, and confidence.
-3. Build `docs/feature-parity-matrix.md`, `docs/workflow-dependency-map.md`, and `docs/unverified-behavior.md`.
-4. Inspect any existing implementation repository state before changes (currently none).
+2. Populate `docs/command-inventory.csv` with unique IDs, visible names, inputs, expected actions, geometry effects, dependencies, outputs, and confidence (CONFIRMED/INFERRED/UNKNOWN).
+3. Build `docs/feature-parity-matrix.md`, `docs/workflow-dependency-map.md`, and `docs/unverified-behavior.md` from evidence.
+4. Align/revise prototype implementation to confirmed behavior; record PASS/FAIL/BLOCKED per command.

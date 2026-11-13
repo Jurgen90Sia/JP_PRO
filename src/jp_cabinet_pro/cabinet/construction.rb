@@ -2,18 +2,19 @@
 
 module JPCabinetPro
   module Cabinet
-    # Cabinet construction/rebuild engine (scaffold).
-    # Real geometry rebuild must be construction-rule dependent and transaction-safe via Adapter.
+    # Cabinet construction/rebuild engine.
+    # Geometry mutation in SketchUp must be transaction-safe via Adapter with rollback on failure.
+    # This module computes a deterministic part set based on construction rules (prototype).
     class Construction
       def initialize(adapter:)
         @adapter = adapter
       end
 
       def rebuild(params:, existing: nil)
-        # Placeholder: compute part set from params; in SketchUp this mutates entities in a transaction.
-        # Must preserve valid material assignments/component identity and support rollback on failure.
         parts = build_parts(params)
-        { ok: true, parts: parts, replaced: !existing.nil? }
+        { ok: true, parts: parts, replaced: !existing.nil?, construction: construction_summary(params) }
+      rescue StandardError => e
+        { ok: false, error: e.message }
       end
 
       def build_parts(params)
@@ -22,23 +23,72 @@ module JPCabinetPro
         d = params[:depth_mm].to_f
         t = params[:panel_thickness_mm].to_f
         shelves = params[:shelf_count].to_i
-        base = [
-          part('side_left', w: t, h: h, t: d),
-          part('side_right', w: t, h: h, t: d),
-          part('bottom', w: [w - 2 * t, 0].max, h: t, t: d),
-          part('top', w: [w - 2 * t, 0].max, h: t, t: d),
-          part('back', w: [w - 2 * t, 0].max, h: [h - 2 * t, 0].max, t: t)
-        ]
-        shelves.times { |i| base << part("shelf_#{i + 1}", w: [w - 2 * t, 0].max, h: t, t: [d - params[:rear_inset_mm].to_f, 0].max) }
-        base
+        rear_inset = params[:rear_inset_mm].to_f
+        groove = params[:groove_depth_mm].to_f
+        back = params[:back_mount_type].to_s
+        top_rule = params[:top_construction].to_s
+        bottom_rule = params[:bottom_construction].to_s
+
+        parts = []
+        parts << part('side_left',  t, h, d, notes: 'side panel')
+        parts << part('side_right', t, h, d, notes: 'side panel')
+
+        horiz_w = (top_rule == 'top_over_sides') ? w : [w - 2 * t, 0].max
+        bottom_w = (bottom_rule == 'bottom_under_sides') ? w : [w - 2 * t, 0].max
+        parts << part('top',    horiz_w, t, d, notes: top_rule)
+        parts << part('bottom', bottom_w, t, d, notes: bottom_rule)
+
+        bw, bh, bd = back_dimensions(w, h, d, t, rear_inset, groove, back)
+        parts << part('back', bw, bh, bd, notes: back)
+
+        shelf_d = shelf_depth(d, t, rear_inset, groove, back)
+        shelf_w = [w - 2 * t, 0].max
+        shelves.times do |i|
+          parts << part("shelf_#{i + 1}", shelf_w, t, shelf_d, notes: 'adjustable shelf placeholder')
+        end
+        parts
       end
 
       private
 
-      def part(role, w:, h:, t:)
+      def construction_summary(params)
         {
-          id: nil, # assigned by BOM/model layer for stable IDs
+          top: params[:top_construction],
+          bottom: params[:bottom_construction],
+          back: params[:back_mount_type]
+        }
+      end
+
+      def back_dimensions(w, h, d, t, rear_inset, groove, back)
+        case back
+        when 'full_back'
+          [[w - 2 * t, 0].max, [h - 2 * t, 0].max, t]
+        when 'recessed_back'
+          [[w - 2 * t, 0].max, [h - 2 * t, 0].max, t]
+        when 'grooved_back'
+          [[w - 2 * t + 2 * [groove, t].min, 0].max, [h - 2 * t + 2 * [groove, t].min, 0].max, t]
+        when 'surface_mounted_back'
+          [w, h, t]
+        else
+          [[w - 2 * t, 0].max, [h - 2 * t, 0].max, t]
+        end
+      end
+
+      def shelf_depth(d, t, rear_inset, groove, back)
+        depth = case back
+                when 'recessed_back' then d - rear_inset - t
+                when 'grooved_back' then d - rear_inset - [groove, t].min
+                when 'full_back', 'surface_mounted_back' then d - t
+                else d - rear_inset
+                end
+        [depth, 0].max
+      end
+
+      def part(role, w, h, t, notes: nil)
+        {
+          id: nil,
           role: role,
+          name: role,
           width_mm: w,
           height_mm: h,
           thickness_mm: t,
@@ -47,7 +97,9 @@ module JPCabinetPro
           edge_banding: { left: nil, right: nil, top: nil, bottom: nil },
           quantity: 1,
           manufacturing_status: 'draft',
-          revision: nil
+          source_geometry_ref: nil,
+          revision: nil,
+          notes: notes
         }
       end
     end

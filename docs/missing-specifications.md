@@ -14,3 +14,7 @@
 - **Vertical slice UI→SketchUp bridge:** `ui/js/bridge.js` dispatches to `window.sketchup.*` when hosted in HtmlDialog; native Ruby callback handlers and dialog wiring not yet implemented.
 - **Technical drawing:** currently a deterministic view-model scaffold (`drawing/technical_view.rb`), not vector-projected geometry/PDF/DXF.
 - **Construction rules:** `cabinet/construction.rb` uses placeholder formulas not yet differentiated by all specified construction rules.
+
+## Update 2026-11-12 (command/UI integration progress)
+- Prototype commands registered/tested (non-runtime): `cabinet.edit_dimensions`, `nesting.plan`, `report.generate`, `cnc.export_csv`, `cnc.export_nesting_dxf`, `library.manage` with registry/factory/loader wiring and UI shell status. AJ-specific command set/fields/behavior still **BLOCKED** pending reference media.
+- Native SketchUp command exposure (toolbar/menu/context), HtmlDialog callback execution in-app, and real geometry/selection remain **unverified**.

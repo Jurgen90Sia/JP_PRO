@@ -9,6 +9,16 @@ class TestDimensions < Minitest::Test
     assert r.ok, r.errors.inspect
     assert_equal 764.0, r.values[:internal][:internal_width_mm]
     assert_equal 684.0, r.values[:internal][:internal_height_mm]
+    assert_equal 532.0, r.values[:internal][:internal_depth_mm]
+  end
+
+  def test_top_bottom_over_sides
+    r = JPCabinetPro::Parametric::Dimensions.validate(
+      top_construction: 'top_over_sides',
+      bottom_construction: 'bottom_under_sides'
+    )
+    assert r.ok, r.errors.inspect
+    assert_equal 720.0, r.values[:internal][:internal_height_mm]
   end
 
   def test_rejects_non_positive
@@ -17,8 +27,10 @@ class TestDimensions < Minitest::Test
     assert r.errors.any? { |e| e.include?('width_mm') }
   end
 
-  def test_rejects_negative_shelves
+  def test_rejects_negative_shelves_and_invalid_back
     r = JPCabinetPro::Parametric::Dimensions.validate(shelf_count: -1)
     refute r.ok
+    r2 = JPCabinetPro::Parametric::Dimensions.validate(back_mount_type: 'bogus')
+    refute r2.ok
   end
 end
