@@ -1,18 +1,36 @@
 # frozen_string_literal: true
 
+require_relative '../doors/front_engine'
+require_relative '../drawers/engine'
+require_relative '../hardware/engine'
+
 module JPCabinetPro
   module Cabinet
     # Cabinet construction/rebuild engine.
     # Geometry mutation in SketchUp must be transaction-safe via Adapter with rollback on failure.
-    # This module computes a deterministic part set based on construction rules (prototype).
+    # Computes a deterministic part set based on construction rules (prototype).
     class Construction
       def initialize(adapter:)
         @adapter = adapter
+        @fronts = JPCabinetPro::Doors::FrontEngine.new
+        @drawers = JPCabinetPro::Drawers::Engine.new
+        @hardware = JPCabinetPro::Hardware::Engine.new
       end
 
       def rebuild(params:, existing: nil)
         parts = build_parts(params)
-        { ok: true, parts: parts, replaced: !existing.nil?, construction: construction_summary(params) }
+        fronts = build_fronts(params)
+        drawers = build_drawers(params)
+        hardware = normalize_hardware(params)
+        {
+          ok: true,
+          parts: parts,
+          fronts: fronts,
+          drawers: drawers,
+          hardware: hardware,
+          replaced: !existing.nil?,
+          construction: construction_summary(params)
+        }
       rescue StandardError => e
         { ok: false, error: e.message }
       end
@@ -47,6 +65,25 @@ module JPCabinetPro
           parts << part("shelf_#{i + 1}", shelf_w, t, shelf_d, notes: 'adjustable shelf placeholder')
         end
         parts
+      end
+
+      def build_fronts(params)
+        cfg = params[:fronts] || params[:doors]
+        return [] unless cfg
+        r = @fronts.configure(params, cfg)
+        r.ok ? r.fronts : []
+      end
+
+      def build_drawers(params)
+        cfg = params[:drawers]
+        return [] unless cfg
+        r = @drawers.configure(params, cfg)
+        r.ok ? r.drawers : []
+      end
+
+      def normalize_hardware(params)
+        items = params[:hardware] || []
+        @hardware.bom_lines(items)
       end
 
       private

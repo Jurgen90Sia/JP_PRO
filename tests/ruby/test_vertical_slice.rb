@@ -69,8 +69,25 @@ class TestVerticalSlice < Minitest::Test
     assert_equal 5, r.revision_state[:revision]
     assert_equal true, r.revision_state[:valid][:bom]
     assert_equal true, r.revision_state[:valid][:drawings]
-    assert_equal false, r.revision_state[:valid][:nesting] # no sheets -> nesting not produced
+    assert_equal false, r.revision_state[:valid][:nesting]
     assert_includes r.revision_state[:stale], :reports
     assert_equal r.revision_state, r.snapshot[:metadata][:revision_state]
+  end
+
+  def test_apply_with_fronts_drawers_hardware
+    input = @input.merge(
+      fronts: { type: 'double', split: 'vertical', gap_mm: 2, perimeter_gap_mm: 2, front_thickness_mm: 18 },
+      drawers: { count: 2, gap_mm: 2, perimeter_gap_mm: 2, slide_clearance_mm: 12, box_depth_mm: 500 },
+      hardware: [{ id: 'h1', type: 'hinge', quantity: 4 }]
+    )
+    r = @cmd.apply(input, assembly_id: 'asm_fd', revision: 1)
+    assert r.ok, r.errors.inspect
+    assert_equal 2, r.fronts.length
+    assert_equal 2, r.drawers.length
+    assert_equal 1, r.hardware.length
+    # carcass(5+2 shelves)=7 + 2 fronts + 2*5 drawer parts = 19
+    assert_operator r.bom.length, :>=, 19
+    assert_equal r.fronts, r.snapshot[:metadata][:fronts]
+    assert_equal r.hardware, r.snapshot[:metadata][:hardware]
   end
 end

@@ -17,7 +17,8 @@ module JPCabinetPro
     # Full SketchUp selection/mutation requires runtime; this class provides the orchestration pipeline.
     class EditDimensions
       Result = Struct.new(:ok, :errors, :preview, :applied, :bom, :cutlist, :view, :view_svg, :revision,
-                          :invalidations, :snapshot, :materials, :edge_banding, :nesting, :revision_state, keyword_init: true)
+                          :invalidations, :snapshot, :materials, :edge_banding, :nesting, :revision_state,
+                          :fronts, :drawers, :hardware, keyword_init: true)
 
       INVALIDATIONS = %w[geometry parts materials edge_banding hardware bom cutlist nesting drawings reports].freeze
 
@@ -36,14 +37,17 @@ module JPCabinetPro
       def preview(input)
         validated = JPCabinetPro::Parametric::Dimensions.validate(input)
         return Result.new(ok: false, errors: validated.errors, applied: false) unless validated.ok
-        parts = @construction.build_parts(validated.values)
         rebuild_meta = @construction.rebuild(params: validated.values)
+        parts = rebuild_meta[:parts] || @construction.build_parts(validated.values)
         Result.new(
           ok: true,
           errors: [],
           preview: {
             params: validated.values,
             parts: parts,
+            fronts: rebuild_meta[:fronts] || [],
+            drawers: rebuild_meta[:drawers] || [],
+            hardware: rebuild_meta[:hardware] || [],
             construction: rebuild_meta[:construction]
           },
           applied: false
@@ -65,7 +69,8 @@ module JPCabinetPro
                   end
         return Result.new(ok: false, errors: [rebuild[:error] || 'rebuild_failed']) unless rebuild && rebuild[:ok]
 
-        bom = @bom.generate(parts: rebuild[:parts], assembly_id: assembly_id)
+        all_parts = collect_all_parts(rebuild)
+        bom = @bom.generate(parts: all_parts, assembly_id: assembly_id)
         cut = @cutlist.generate(bom)
         view = @drawing.generate(parts: bom, cabinet_params: p.preview[:params], view_type: :front, revision: revision)
         view_svg = safe_svg(view)
@@ -87,7 +92,13 @@ module JPCabinetPro
           edge_banding: edge_banding,
           nesting: nesting,
           view_svg: view_svg,
-          metadata: { invalidations: INVALIDATIONS, revision_state: revision_state }
+          metadata: {
+            invalidations: INVALIDATIONS,
+            revision_state: revision_state,
+            fronts: rebuild[:fronts] || [],
+            drawers: rebuild[:drawers] || [],
+            hardware: rebuild[:hardware] || []
+          }
         )
 
         Result.new(
@@ -95,7 +106,8 @@ module JPCabinetPro
           bom: bom, cutlist: cut, view: view, view_svg: view_svg, revision: revision,
           invalidations: INVALIDATIONS, snapshot: snapshot,
           materials: materials, edge_banding: edge_banding, nesting: nesting,
-          revision_state: revision_state
+          revision_state: revision_state,
+          fronts: rebuild[:fronts] || [], drawers: rebuild[:drawers] || [], hardware: rebuild[:hardware] || []
         )
       rescue StandardError => e
         Result.new(ok: false, errors: [e.message])
@@ -103,13 +115,20 @@ module JPCabinetPro
 
       private
 
+      def collect_all_parts(rebuild)
+        parts = Array(rebuild[:parts]).dup
+        Array(rebuild[:fronts]).each { |f| parts << f }
+        Array(rebuild[:drawers]).each do |d|
+          Array(d[:parts]).each { |p| parts << p }
+        end
+        parts
+      end
+
       def update_revision_tracker(tracker, assembly_id, nesting)
         return nil unless tracker
-        # outputs produced by this pipeline in prototype form
         produced = [:geometry, :parts, :materials, :edge_banding, :bom, :cutlist, :drawings]
         produced << :nesting if nesting && nesting[:ok]
         tracker.mark_valid!(assembly_id, *produced)
-        # hardware/reports not produced by this command
         tracker.snapshot(assembly_id)
       end
 
