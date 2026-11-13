@@ -3,8 +3,6 @@
 module JPCabinetPro
   module Commands
     # Central command registry. Every UI action must bind to a registered command.
-    # Contract per command: id, icon, label_sq, label_en, input_schema, validation,
-    # handler, required_selection, undo_behavior, test_id.
     module Registry
       class << self
         def commands
@@ -28,6 +26,30 @@ module JPCabinetPro
         def register_defaults
           return if @defaults_registered
           register(
+            id: 'app.show',
+            icon: 'icons/svg/cabinet.svg',
+            label_sq: 'Hap JP Cabinet PRO',
+            label_en: 'Open JP Cabinet PRO',
+            input_schema: { page: :string_optional },
+            validation: 'none',
+            handler: 'JPCabinetPro::Commands::ShowDialog',
+            required_selection: 'none',
+            undo_behavior: 'none',
+            test_id: 'cmd.app.show'
+          )
+          register(
+            id: 'cabinet.create',
+            icon: 'icons/svg/cabinet.svg',
+            label_sq: 'Krijo kabinet',
+            label_en: 'Create Cabinet',
+            input_schema: { width_mm: :float, height_mm: :float, depth_mm: :float },
+            validation: 'JPCabinetPro::Parametric::Dimensions.validate',
+            handler: 'JPCabinetPro::Commands::CreateCabinet',
+            required_selection: 'none',
+            undo_behavior: 'single_transaction_create',
+            test_id: 'cmd.cabinet.create'
+          )
+          register(
             id: 'cabinet.edit_dimensions',
             icon: 'icons/svg/dimensions.svg',
             label_sq: 'Ndrysho dimensionet',
@@ -41,9 +63,21 @@ module JPCabinetPro
             },
             validation: 'JPCabinetPro::Parametric::Dimensions.validate',
             handler: 'JPCabinetPro::Commands::EditDimensions',
-            required_selection: 'cabinet',
+            required_selection: 'cabinet_optional_runtime',
             undo_behavior: 'single_transaction_apply',
             test_id: 'cmd.cabinet.edit_dimensions'
+          )
+          register(
+            id: 'cabinet.apply_selection',
+            icon: 'icons/svg/dimensions.svg',
+            label_sq: 'Apliko në përzgjedhje',
+            label_en: 'Apply to Selection',
+            input_schema: { same_as: 'cabinet.edit_dimensions' },
+            validation: 'JPCabinetPro::Parametric::Dimensions.validate',
+            handler: 'JPCabinetPro::Commands::ApplyToSelection',
+            required_selection: 'cabinet',
+            undo_behavior: 'single_transaction_apply',
+            test_id: 'cmd.cabinet.apply_selection'
           )
           register(
             id: 'nesting.plan',

@@ -1,7 +1,9 @@
 # frozen_string_literal: true
 
+require 'json'
 require_relative '../parametric/dimensions'
 require_relative '../cabinet/construction'
+require_relative '../cabinet/builder'
 require_relative '../bom/generator'
 require_relative '../cutlist/generator'
 require_relative '../drawing/technical_view'
@@ -13,18 +15,19 @@ require_relative '../diagnostics/revision_tracker'
 
 module JPCabinetPro
   module Commands
-    # Vertical slice: Select Cabinet -> Edit Dimensions -> Rebuild Geometry -> Update BOM -> Generate Technical View
-    # Full SketchUp selection/mutation requires runtime; this class provides the orchestration pipeline.
+    # Vertical slice: Edit Dimensions -> Rebuild Geometry (runtime when available) -> Update BOM/outputs.
+    # SketchUp selection/mutation guarded by adapter; non-runtime pipeline remains functional for logic/tests.
     class EditDimensions
       Result = Struct.new(:ok, :errors, :preview, :applied, :bom, :cutlist, :view, :view_svg, :revision,
                           :invalidations, :snapshot, :materials, :edge_banding, :nesting, :revision_state,
-                          :fronts, :drawers, :hardware, keyword_init: true)
+                          :fronts, :drawers, :hardware, :entity_status, keyword_init: true)
 
       INVALIDATIONS = %w[geometry parts materials edge_banding hardware bom cutlist nesting drawings reports].freeze
 
       def initialize(adapter: nil, materials_engine: nil, edge_banding_engine: nil, nesting_optimizer: nil, revision_tracker: nil)
         @adapter = adapter
         @construction = JPCabinetPro::Cabinet::Construction.new(adapter: adapter)
+        @builder = defined?(JPCabinetPro::Cabinet::Builder) ? JPCabinetPro::Cabinet::Builder.new(adapter: adapter) : nil
         @bom = JPCabinetPro::Bom::Generator.new
         @cutlist = JPCabinetPro::Cutlist::Generator.new
         @drawing = JPCabinetPro::Drawing::TechnicalView.new
@@ -62,12 +65,9 @@ module JPCabinetPro
         tracker = @revision_tracker
         tracker&.touch!(assembly_id, revision)
 
-        rebuild = if @adapter && @adapter.respond_to?(:transaction)
-                    @adapter.transaction('JP Cabinet PRO: Edit Dimensions') { @construction.rebuild(params: p.preview[:params], existing: existing) }
-                  else
-                    @construction.rebuild(params: p.preview[:params], existing: existing)
-                  end
-        return Result.new(ok: false, errors: [rebuild[:error] || 'rebuild_failed']) unless rebuild && rebuild[:ok]
+        entity_status = { runtime: runtime?, rebuilt: false, created: false, persisted: false }
+        rebuild = perform_rebuild(p.preview[:params], p.preview[:parts], existing, entity_status)
+        return Result.new(ok: false, errors: [rebuild[:error] || 'rebuild_failed'], entity_status: entity_status) unless rebuild && rebuild[:ok]
 
         all_parts = collect_all_parts(rebuild)
         bom = @bom.generate(parts: all_parts, assembly_id: assembly_id)
@@ -97,7 +97,8 @@ module JPCabinetPro
             revision_state: revision_state,
             fronts: rebuild[:fronts] || [],
             drawers: rebuild[:drawers] || [],
-            hardware: rebuild[:hardware] || []
+            hardware: rebuild[:hardware] || [],
+            entity_status: entity_status
           }
         )
 
@@ -107,13 +108,50 @@ module JPCabinetPro
           invalidations: INVALIDATIONS, snapshot: snapshot,
           materials: materials, edge_banding: edge_banding, nesting: nesting,
           revision_state: revision_state,
-          fronts: rebuild[:fronts] || [], drawers: rebuild[:drawers] || [], hardware: rebuild[:hardware] || []
+          fronts: rebuild[:fronts] || [], drawers: rebuild[:drawers] || [], hardware: rebuild[:hardware] || [],
+          entity_status: entity_status
         )
       rescue StandardError => e
         Result.new(ok: false, errors: [e.message])
       end
 
       private
+
+      def runtime?
+        @adapter && @adapter.respond_to?(:available?) && @adapter.available?
+      end
+
+      def perform_rebuild(params, parts, existing, entity_status)
+        meta = @construction.rebuild(params: params, existing: existing)
+        return meta unless runtime? && @builder
+
+        target = existing
+        if target
+          br = @builder.rebuild(entity: target, params: params, parts: parts)
+          entity_status[:rebuilt] = br.ok
+          entity_status[:entity_errors] = br.errors unless br.ok
+          persist_entity(target, params) if br.ok
+        else
+          br = @builder.create(params: params, parts: parts)
+          entity_status[:created] = br.ok
+          entity_status[:entity_errors] = br.errors unless br.ok
+          persist_entity(br.entity, params) if br.ok && br.entity
+        end
+        meta
+      rescue StandardError => e
+        meta = @construction.rebuild(params: params, existing: existing)
+        meta[:entity_error] = e.message if meta.is_a?(Hash)
+        entity_status[:entity_errors] = [e.message]
+        meta
+      end
+
+      def persist_entity(entity, params)
+        return false unless entity && @adapter.respond_to?(:mark_cabinet!)
+        @adapter.mark_cabinet!(entity, params, { 'revision' => Time.now.to_i })
+        true
+      rescue StandardError
+        false
+      end
 
       def collect_all_parts(rebuild)
         parts = Array(rebuild[:parts]).dup
@@ -126,7 +164,7 @@ module JPCabinetPro
 
       def update_revision_tracker(tracker, assembly_id, nesting)
         return nil unless tracker
-        produced = [:geometry, :parts, :materials, :edge_banding, :bom, :cutlist, :drawings]
+        produced = [:geometry, :parts, :materials, :edge_banding, :hardware, :bom, :cutlist, :drawings]
         produced << :nesting if nesting && nesting[:ok]
         tracker.mark_valid!(assembly_id, *produced)
         tracker.snapshot(assembly_id)

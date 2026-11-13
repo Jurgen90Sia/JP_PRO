@@ -2,41 +2,184 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>JP Cabinet PRO</title>
   <link rel="stylesheet" href="css/app.css" />
-  <style>
-    .modules ul { list-style: none; padding: 0; margin: 0; }
-    .modules li { padding: 8px 10px; border-bottom: 1px solid #3a3d46; }
-    .tag { font-size: 11px; padding: 2px 6px; border-radius: 3px; margin-left: 6px; }
-    .ok { background: #2d5a3d; color: #d7f5e1; }
-    .scaf { background: #4a3f1f; color: #f2ddb0; }
-    .no { background: #4a2a2a; color: #f0caca; }
-    .note { font-size: 12px; color: #a0a4ad; margin-top: 12px; }
-    a { color: #7fb0ff; }
-  </style>
 </head>
 <body>
-  <div class="panel">
-    <header>
-      <h1>JP Cabinet PRO <small style="color:#a0a4ad;font-weight:normal">(Scaffold/Prototype)</small></h1>
-    </header>
-    <nav class="modules" aria-label="Modules">
-      <ul>
-        <li><strong>PROJECT</strong> <span class="tag no">not implemented</span></li>
-        <li><strong>LIBRARY</strong> <span class="tag scaf">prototype logic</span> — <a href="dialogs/library.html">info</a></li>
-        <li><strong>CABINETS</strong> <span class="tag scaf">prototype</span> — <a href="dialogs/dimensions.html">Edit Dimensions (dialog scaffold)</a></li>
-        <li><strong>3D DESIGN</strong> <span class="tag scaf">command pipeline prototype (no native SketchUp geometry)</span></li>
-        <li><strong>MATERIALS</strong> <span class="tag scaf">prototype (net/gross calc)</span></li>
-        <li><strong>HARDWARE</strong> <span class="tag scaf">prototype (structured/BOM/aggregate, adapter-based)</span></li>
-        <li><strong>BOM</strong> <span class="tag scaf">prototype pipeline</span></li>
-        <li><strong>NESTING</strong> <span class="tag scaf">prototype optimizer</span> — <a href="dialogs/nesting.html">info</a></li>
-        <li><strong>QUOTATIONS</strong> <span class="tag no">not implemented</span></li>
-        <li><strong>SKETCHUP COMPONENTS</strong> <span class="tag no">not implemented (runtime required)</span></li>
-        <li><strong>REPORTS / CNC</strong> <span class="tag scaf">prototype HTML/SVG/CSV/DXF(nesting) — unverified</span> — <a href="dialogs/report.html">info</a></li>
-        <li><strong>INDUSTRIAL LAYOUT</strong> <span class="tag no">not implemented</span></li>
-      </ul>
-    </nav>
-    <p class="note">Registered prototype commands: <code>cabinet.edit_dimensions</code>, <code>nesting.plan</code>, <code>report.generate</code>, <code>cnc.export_csv</code>, <code>cnc.export_nesting_dxf</code>, <code>library.manage</code>. <strong>Phase 0 reference audit BLOCKED</strong> (AJ Cabinet screenshots/video not in workspace). <strong>No parity/production claims.</strong> SketchUp runtime integration unverified.</p>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">JP Cabinet PRO <small data-i18n="blocked_phase0">Phase 0 AJ audit BLOCKED</small></div>
+      <nav class="nav" id="nav"></nav>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <h1 id="page-title" data-i18n="cabinet_designer">Cabinet Designer</h1>
+        <div class="lang-toggle">
+          <span data-i18n="language">Language</span>
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="sq">SQ</button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="note" id="runtime-note" data-i18n="not_runtime">SketchUp runtime not available; logic-only results shown where possible.</div>
+
+        <section class="page" id="page-designer">
+          <div class="card">
+            <h2 data-i18n="cabinet_designer">Cabinet Designer</h2>
+            <p class="note">Create or update a parametric cabinet. In SketchUp runtime this creates/rebuilds real entities in a transaction; outside runtime it computes deterministic parts and outputs.</p>
+            <div class="grid" id="designer-grid"></div>
+            <div class="actions">
+              <button type="button" class="primary" id="btn-create" data-i18n="create_cabinet">Create Cabinet</button>
+              <button type="button" id="btn-preview" data-i18n="preview">Preview</button>
+              <button type="button" id="btn-apply" data-i18n="apply">Apply</button>
+              <button type="button" id="btn-read-sel" data-i18n="read_selection">Read Selection</button>
+              <button type="button" id="btn-apply-sel" data-i18n="apply_selection">Apply to Selection</button>
+            </div>
+            <div id="designer-errors" class="errors"></div>
+            <div id="designer-internal" class="calculated"></div>
+            <div id="designer-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-dimensions">
+          <div class="card">
+            <h2 data-i18n="dimensions_construction">Dimensions & Construction</h2>
+            <div class="grid" id="dimensions-grid"></div>
+            <div class="actions">
+              <button type="button" id="dim-preview" data-i18n="preview">Preview</button>
+              <button type="button" class="primary" id="dim-apply" data-i18n="apply">Apply</button>
+            </div>
+            <div id="dimensions-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-fronts">
+          <div class="card">
+            <h2 data-i18n="fronts_drawers">Fronts & Drawers</h2>
+            <div class="row">
+              <div class="card">
+                <h2>Fronts / Doors</h2>
+                <label>Enabled <select id="fronts-enabled"><option value="false">No</option><option value="true">Yes</option></select></label>
+                <label>Type <select id="fronts-type"><option>single</option><option>double</option><option>three</option><option>four</option></select></label>
+                <label>Mounting <select id="fronts-mounting"><option>full_overlay</option><option>partial_overlay</option><option>inset</option><option>lift_up</option><option>bi_fold</option><option>sliding</option></select></label>
+                <label>Split <select id="fronts-split"><option>none</option><option>horizontal</option><option>vertical</option></select></label>
+                <label>Gap (mm) <input id="fronts-gap" type="number" step="0.1" value="2"></label>
+                <label>Perimeter gap (mm) <input id="fronts-perimeter" type="number" step="0.1" value="2"></label>
+                <label>Front thickness (mm) <input id="fronts-thickness" type="number" step="0.1" value="18"></label>
+              </div>
+              <div class="card">
+                <h2>Drawers</h2>
+                <label>Enabled <select id="drawers-enabled"><option value="false">No</option><option value="true">Yes</option></select></label>
+                <label>Count <input id="drawers-count" type="number" step="1" min="1" value="3"></label>
+                <label>Mounting <select id="drawers-mounting"><option>overlay</option><option>inset</option></select></label>
+                <label>Gap (mm) <input id="drawers-gap" type="number" step="0.1" value="2"></label>
+                <label>Slide clearance (mm) <input id="drawers-slide" type="number" step="0.1" value="12.5"></label>
+                <label>Box depth (mm) <input id="drawers-depth" type="number" step="0.1" value="500"></label>
+                <label>Side thickness (mm) <input id="drawers-side-t" type="number" step="0.1" value="16"></label>
+              </div>
+            </div>
+            <div class="actions"><button type="button" class="primary" id="fronts-preview">Preview Fronts/Drawers</button></div>
+            <div id="fronts-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-materials">
+          <div class="card">
+            <h2 data-i18n="materials_edge">Materials & Edge Banding</h2>
+            <label>Default material ID <input id="mat-id" value="MDF_18"></label>
+            <label>Waste factor (0-1) <input id="mat-waste" type="number" step="0.01" min="0" value="0.1"></label>
+            <label>Edge banding JSON (per role/edges optional) <textarea id="edge-json">{"default":{"left":{"material_id":"PVC_1","thickness_mm":1},"right":{"material_id":"PVC_1","thickness_mm":1},"top":null,"bottom":null}}</textarea></label>
+            <div class="actions"><button type="button" class="primary" id="materials-run">Compute Materials & Edge Banding</button></div>
+            <div id="materials-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-hardware">
+          <div class="card">
+            <h2 data-i18n="hardware">Hardware</h2>
+            <p class="note">Structured hardware items (adapter-based, no fabricated manufacturer dimensions). JSON array.</p>
+            <textarea id="hardware-json">[
+  {"id":"hinge_1","type":"hinge","catalog_ref":"adapter:hinge","quantity":4},
+  {"id":"handle_1","type":"handle","catalog_ref":"adapter:handle","quantity":2},
+  {"id":"slide_1","type":"drawer_slide","catalog_ref":"adapter:slide","quantity":6}
+]</textarea>
+            <div class="actions"><button type="button" class="primary" id="hardware-run">Validate & Aggregate</button></div>
+            <div id="hardware-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-library">
+          <div class="card">
+            <h2 data-i18n="component_library">Component Library</h2>
+            <label>Index path <input id="lib-path" value="/tmp/jp_library.json"></label>
+            <label>Search query <input id="lib-query" placeholder="name, id, tag"></label>
+            <label>Component JSON (for upsert) <textarea id="lib-json">{"id":"base_800","name":"Base Cabinet 800","category":"Base","tags":["cabinet","800"],"favorite":false}</textarea></label>
+            <div class="actions">
+              <button type="button" id="lib-search">Search</button>
+              <button type="button" class="primary" id="lib-upsert">Upsert</button>
+            </div>
+            <div id="library-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-bom">
+          <div class="card">
+            <h2 data-i18n="bom_cutlist">BOM & Cut List</h2>
+            <p class="note">Derived from the last pipeline result in this dialog session (Preview/Apply).</p>
+            <div class="actions"><button type="button" class="primary" id="bom-refresh">Refresh BOM/CutList View</button></div>
+            <div id="bom-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-nesting">
+          <div class="card">
+            <h2 data-i18n="nesting">Nesting</h2>
+            <div class="grid">
+              <label>Strategy <select id="nest-strategy"><option>maxrects</option><option>guillotine</option><option>best_area_fit</option><option>best_short_side_fit</option></select></label>
+              <label>Sheet W (mm) <input id="nest-sw" type="number" value="2800"></label>
+              <label>Sheet H (mm) <input id="nest-sh" type="number" value="2070"></label>
+              <label>Kerf (mm) <input id="nest-kerf" type="number" step="0.1" value="3"></label>
+              <label>Trim (mm) <input id="nest-trim" type="number" step="0.1" value="10"></label>
+            </div>
+            <p class="note">Runs validated 2D nesting using current cutlist/parts from last pipeline result.</p>
+            <div class="actions"><button type="button" class="primary" id="nest-run" data-i18n="plan_nesting">Plan Nesting</button></div>
+            <div id="nesting-output" class="output"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-reports">
+          <div class="card">
+            <h2 data-i18n="reports_export">Reports & Export</h2>
+            <div class="actions">
+              <button type="button" class="primary" id="report-run" data-i18n="generate_report">Generate Report</button>
+              <button type="button" id="export-csv" data-i18n="export_csv">Export CSV</button>
+              <button type="button" id="export-dxf" data-i18n="export_nesting_dxf">Export Nesting DXF</button>
+            </div>
+            <div id="report-output" class="output"></div>
+            <div id="report-html" class="output" style="background:#fff;color:#111"></div>
+          </div>
+        </section>
+
+        <section class="page" id="page-settings">
+          <div class="card">
+            <h2 data-i18n="settings_diagnostics">Settings & Diagnostics</h2>
+            <div class="actions"><button type="button" class="primary" id="diag-run" data-i18n="refresh">Refresh</button></div>
+            <div id="diag-output" class="output"></div>
+            <div class="card" style="margin-top:12px">
+              <h2>Notes</h2>
+              <ul class="note">
+                <li>AJ Cabinet parity: <strong>BLOCKED/UNVERIFIED</strong> (no reference media in workspace).</li>
+                <li>Native SketchUp geometry/UI/Undo/Redo/observers: runtime-dependent; verified only in SketchUp 2021–2026.</li>
+                <li>Exports: generic CSV and nesting DXF (rect outlines) only; not machine-certified CNC.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
   </div>
+  <script src="js/bridge.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

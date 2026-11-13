@@ -7,8 +7,8 @@ require_relative '../hardware/engine'
 module JPCabinetPro
   module Cabinet
     # Cabinet construction/rebuild engine.
-    # Geometry mutation in SketchUp must be transaction-safe via Adapter with rollback on failure.
-    # Computes a deterministic part set based on construction rules (prototype).
+    # Computes a deterministic part set based on construction rules (prototype, AJ-unverified).
+    # SketchUp geometry mutation is performed by Builder in runtime transactions.
     class Construction
       def initialize(adapter:)
         @adapter = adapter
@@ -36,16 +36,22 @@ module JPCabinetPro
       end
 
       def build_parts(params)
-        w = params[:width_mm].to_f
-        h = params[:height_mm].to_f
-        d = params[:depth_mm].to_f
-        t = params[:panel_thickness_mm].to_f
-        shelves = params[:shelf_count].to_i
-        rear_inset = params[:rear_inset_mm].to_f
-        groove = params[:groove_depth_mm].to_f
-        back = params[:back_mount_type].to_s
-        top_rule = params[:top_construction].to_s
-        bottom_rule = params[:bottom_construction].to_s
+        p = sym(params)
+        w = p[:width_mm].to_f
+        h = p[:height_mm].to_f
+        d = p[:depth_mm].to_f
+        t = p[:panel_thickness_mm].to_f
+        shelves = p[:shelf_count].to_i
+        partitions = p[:partition_count].to_i
+        rear_inset = p[:rear_inset_mm].to_f
+        groove = p[:groove_depth_mm].to_f
+        back = p[:back_mount_type].to_s
+        top_rule = p[:top_construction].to_s
+        bottom_rule = p[:bottom_construction].to_s
+        plinth_h = p[:plinth_height_mm].to_f
+        plinth_setback = p[:plinth_setback_mm].to_f
+        legs_h = p[:legs_height_mm].to_f
+        leg_count = p[:leg_count].to_i
 
         parts = []
         parts << part('side_left',  t, h, d, notes: 'side panel')
@@ -56,14 +62,42 @@ module JPCabinetPro
         parts << part('top',    horiz_w, t, d, notes: top_rule)
         parts << part('bottom', bottom_w, t, d, notes: bottom_rule)
 
-        bw, bh, bd = back_dimensions(w, h, d, t, rear_inset, groove, back)
-        parts << part('back', bw, bh, bd, notes: back)
+        bw, bh, bd, bnote = back_dimensions(w, h, d, t, rear_inset, groove, back, top_rule, bottom_rule)
+        parts << part('back', bw, bh, bd, notes: bnote)
 
         shelf_d = shelf_depth(d, t, rear_inset, groove, back)
         shelf_w = [w - 2 * t, 0].max
         shelves.times do |i|
-          parts << part("shelf_#{i + 1}", shelf_w, t, shelf_d, notes: 'adjustable shelf placeholder')
+          parts << part("shelf_#{i + 1}", shelf_w, t, shelf_d, notes: 'adjustable shelf')
         end
+
+        # partitions: vertical dividers between sides (same clear depth/height as opening)
+        if partitions > 0
+          clear_h = h
+          clear_h -= t if top_rule == 'top_between_sides'
+          clear_h -= t if bottom_rule == 'bottom_between_sides'
+          partitions.times do |i|
+            parts << part("partition_#{i + 1}", t, [clear_h, 0].max, shelf_d, notes: 'vertical partition')
+          end
+        end
+
+        # plinth: front/rear stretchers as prototype parts (deterministic)
+        if plinth_h > 0
+          pw = [w - 2 * t, 0].max
+          pd = [d - plinth_setback, t].max
+          parts << part('plinth_front', pw, plinth_h, t, notes: 'plinth')
+          parts << part('plinth_back',  pw, plinth_h, t, notes: 'plinth')
+          parts << part('plinth_side_left',  t, plinth_h, [pd - 2 * t, t].max, notes: 'plinth')
+          parts << part('plinth_side_right', t, plinth_h, [pd - 2 * t, t].max, notes: 'plinth')
+        end
+
+        # legs: represented as hardware-like parts for BOM/calc (prototype)
+        if legs_h > 0 && leg_count > 0
+          leg_count.times do |i|
+            parts << part("leg_#{i + 1}", 50.0, legs_h, 50.0, notes: 'adjustable leg (prototype)')
+          end
+        end
+
         parts
       end
 
@@ -89,32 +123,48 @@ module JPCabinetPro
       private
 
       def construction_summary(params)
+        p = sym(params)
         {
-          top: params[:top_construction],
-          bottom: params[:bottom_construction],
-          back: params[:back_mount_type]
+          top: p[:top_construction],
+          bottom: p[:bottom_construction],
+          back: p[:back_mount_type],
+          plinth_height_mm: p[:plinth_height_mm],
+          legs_height_mm: p[:legs_height_mm],
+          partitions: p[:partition_count]
         }
       end
 
-      def back_dimensions(w, h, d, t, rear_inset, groove, back)
+      def back_dimensions(w, h, d, t, rear_inset, groove, back, top_rule, bottom_rule)
+        ih = h
+        ih -= t if top_rule == 'top_between_sides'
+        ih -= t if bottom_rule == 'bottom_between_sides'
+        iw = [w - 2 * t, 0].max
         case back
-        when 'full_back'
-          [[w - 2 * t, 0].max, [h - 2 * t, 0].max, t]
-        when 'recessed_back'
-          [[w - 2 * t, 0].max, [h - 2 * t, 0].max, t]
+        when 'full_back', 'recessed_back'
+          [iw, [ih, 0].max, t, back]
         when 'grooved_back'
-          [[w - 2 * t + 2 * [groove, t].min, 0].max, [h - 2 * t + 2 * [groove, t].min, 0].max, t]
+          ins = [groove, t].min
+          [[iw + 2 * ins, 0].max, [ih + 2 * ins, 0].max, t, 'grooved_back']
+        when 'hdf_grooved'
+          ins = [groove, t].min
+          bt = [pick_hdf_thickness(t), 3.0].max
+          [[iw + 2 * ins, 0].max, [ih + 2 * ins, 0].max, bt, 'hdf_grooved_back']
         when 'surface_mounted_back'
-          [w, h, t]
+          [w, h, t, back]
         else
-          [[w - 2 * t, 0].max, [h - 2 * t, 0].max, t]
+          [iw, [ih, 0].max, t, back]
         end
+      end
+
+      def pick_hdf_thickness(panel_t)
+        # common HDF backs: 3-4mm; prototype heuristic only
+        panel_t <= 16 ? 3.0 : 4.0
       end
 
       def shelf_depth(d, t, rear_inset, groove, back)
         depth = case back
                 when 'recessed_back' then d - rear_inset - t
-                when 'grooved_back' then d - rear_inset - [groove, t].min
+                when 'grooved_back', 'hdf_grooved' then d - rear_inset - [groove, t].min
                 when 'full_back', 'surface_mounted_back' then d - t
                 else d - rear_inset
                 end
@@ -138,6 +188,11 @@ module JPCabinetPro
           revision: nil,
           notes: notes
         }
+      end
+
+      def sym(h)
+        return {} unless h.is_a?(Hash)
+        h.each_with_object({}) { |(k, v), out| out[k.to_sym] = v }
       end
     end
   end

@@ -6,7 +6,6 @@ require_relative '../../src/jp_cabinet_pro/commands/factory'
 
 class TestCommandRegistry < Minitest::Test
   def setup
-    # reset defaults flag for isolation
     JPCabinetPro::Commands::Registry.instance_variable_set(:@defaults_registered, false)
     JPCabinetPro::Commands::Registry.instance_variable_set(:@commands, {})
     JPCabinetPro::Commands::Registry.register_defaults
@@ -14,7 +13,10 @@ class TestCommandRegistry < Minitest::Test
 
   def test_registers_core_commands
     ids = JPCabinetPro::Commands::Registry.commands.keys
-    %w[cabinet.edit_dimensions nesting.plan report.generate cnc.export_csv cnc.export_nesting_dxf library.manage].each do |id|
+    %w[
+      app.show cabinet.create cabinet.edit_dimensions cabinet.apply_selection
+      nesting.plan report.generate cnc.export_csv cnc.export_nesting_dxf library.manage
+    ].each do |id|
       assert_includes ids, id
     end
   end
@@ -28,7 +30,10 @@ class TestCommandRegistry < Minitest::Test
   end
 
   def test_factory_builds_known_handlers
+    assert JPCabinetPro::Commands::Factory.build('app.show')
+    assert JPCabinetPro::Commands::Factory.build('cabinet.create')
     assert JPCabinetPro::Commands::Factory.build('cabinet.edit_dimensions')
+    assert JPCabinetPro::Commands::Factory.build('cabinet.apply_selection')
     assert JPCabinetPro::Commands::Factory.build('nesting.plan')
     assert JPCabinetPro::Commands::Factory.build('report.generate')
     assert JPCabinetPro::Commands::Factory.build('cnc.export_csv')
